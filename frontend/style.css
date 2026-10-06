@@ -1,0 +1,45 @@
+/* Custom Styles for Network Telemetry Dashboard */
+
+.flow-card {
+  @apply bg-dark-950/70 border border-slate-800 rounded-xl p-3 flex flex-col items-center text-center transition-all duration-300;
+}
+
+.flow-card.active {
+  @apply border-emerald-500/50 bg-emerald-950/20 shadow-lg shadow-emerald-500/10;
+}
+
+.flow-card.pulsing {
+  @apply ring-2 ring-emerald-400 ring-offset-2 ring-offset-dark-950 scale-105;
+}
+
+.flow-icon {
+  @apply w-10 h-10 rounded-lg border flex items-center justify-center mb-2 transition-transform duration-200;
+}
+
+.router-btn {
+  @apply bg-dark-950 border border-slate-800 hover:border-slate-700 text-slate-300 rounded-xl p-2.5 text-center transition-all duration-200;
+}
+
+.router-btn.active {
+  @apply bg-emerald-950/40 border-emerald-500 text-emerald-300 ring-1 ring-emerald-500/30;
+}
+
+.preset-btn {
+  @apply bg-dark-950/80 border border-slate-800/80 hover:border-slate-700 hover:bg-slate-800/40 text-slate-300 rounded-lg p-2 text-left flex items-center gap-2 transition;
+}
+
+/* Scrollbar styles */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #090d16;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}

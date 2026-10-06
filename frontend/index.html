@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Network Telemetry & Automation | Kafka + GNS3</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              500: '#22c55e',
+              600: '#16a34a',
+            },
+            dark: {
+              800: '#1e293b',
+              900: '#0f172a',
+              950: '#020617',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="bg-dark-950 text-slate-100 min-h-screen font-sans flex flex-col antialiased selection:bg-emerald-500 selection:text-white">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-dark-900/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+          <i class="ph-bold ph-git-branch text-xl text-dark-950"></i>
+        </div>
+        <div>
+          <h1 class="text-base font-bold tracking-tight text-white flex items-center gap-2">
+            Network Analytics & Telemetry
+            <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono font-normal">Kafka Pipeline</span>
+          </h1>
+          <p class="text-xs text-slate-400">Asynchronous Cisco IOS Orchestrator via Paramiko & GNS3</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-4">
+        <!-- Status Badges -->
+        <div class="flex items-center space-x-2 text-xs bg-dark-800 px-3 py-1.5 rounded-lg border border-slate-700/60">
+          <span class="flex h-2 w-2 relative">
+            <span id="kafka-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span id="kafka-dot" class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span id="kafka-status-text" class="text-slate-300 font-medium">Kafka Broker Active</span>
+        </div>
+
+        <a href="http://localhost:8085" target="_blank" rel="noopener" class="flex items-center space-x-1.5 text-xs bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-3 py-1.5 rounded-lg transition">
+          <i class="ph-bold ph-gauge"></i>
+          <span>Open Kafka UI</span>
+          <i class="ph ph-arrow-up-right text-xs"></i>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
+
+    <!-- Architecture Visual Flow (As shown in Diagram) -->
+    <div class="bg-dark-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+      <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between">
+        <span class="flex items-center gap-1.5">
+          <i class="ph-bold ph-tree-structure text-emerald-400"></i> System Architecture Flow
+        </span>
+        <span class="text-[11px] text-slate-500 font-normal">Real-time Event Dispatch</span>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 relative">
+        <!-- Node 1: Frontend -->
+        <div id="flow-frontend" class="flow-card active">
+          <div class="flow-icon bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+            <i class="ph-bold ph-browser text-lg"></i>
+          </div>
+          <div class="text-xs font-bold text-white">Frontend</div>
+          <div class="text-[10px] text-slate-400">Web UI Console</div>
+        </div>
+
+        <!-- Node 2: Backend -->
+        <div id="flow-backend" class="flow-card">
+          <div class="flow-icon bg-blue-500/10 text-blue-400 border-blue-500/30">
+            <i class="ph-bold ph-cpu text-lg"></i>
+          </div>
+          <div class="text-xs font-bold text-white">FastAPI Backend</div>
+          <div class="text-[10px] text-slate-400">Kafka Producer</div>
+        </div>
+
+        <!-- Node 3: Kafka -->
+        <div id="flow-kafka" class="flow-card">
+          <div class="flow-icon bg-amber-500/10 text-amber-400 border-amber-500/30">
+            <i class="ph-bold ph-arrows-merge text-lg"></i>
+          </div>
+          <div class="text-xs font-bold text-white">Kafka Broker</div>
+          <div class="text-[10px] text-slate-400">Topic: router-tasks</div>
+        </div>
+
+        <!-- Node 4: Worker -->
+        <div id="flow-worker" class="flow-card">
+          <div class="flow-icon bg-purple-500/10 text-purple-400 border-purple-500/30">
+            <i class="ph-bold ph-gear-six text-lg"></i>
+          </div>
+          <div class="text-xs font-bold text-white">Worker</div>
+          <div class="text-[10px] text-slate-400">Paramiko SSH Client</div>
+        </div>
+
+        <!-- Node 5: GNS3 -->
+        <div id="flow-gns3" class="flow-card col-span-2 sm:col-span-1">
+          <div class="flow-icon bg-rose-500/10 text-rose-400 border-rose-500/30">
+            <i class="ph-bold ph-hard-drives text-lg"></i>
+          </div>
+          <div class="text-xs font-bold text-white">GNS3 Routers</div>
+          <div class="text-[10px] text-slate-400">Router1 & Router2</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- Left Column: Command Center (5 cols) -->
+      <div class="lg:col-span-5 space-y-6">
+
+        <!-- Target Router Selector -->
+        <div class="bg-dark-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+              <i class="ph-bold ph-device-mobile-speaker text-emerald-400"></i>
+              Target Router (GNS3)
+            </h2>
+            <span class="text-xs text-slate-500" id="selected-ip-label">192.168.122.101</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2" id="router-selector">
+            <button type="button" data-router="Router1" class="router-btn active">
+              <div class="text-xs font-bold">Router 1</div>
+              <div class="text-[10px] opacity-75">Core / Gateway</div>
+            </button>
+            <button type="button" data-router="Router2" class="router-btn">
+              <div class="text-xs font-bold">Router 2</div>
+              <div class="text-[10px] opacity-75">Edge / Dist</div>
+            </button>
+            <button type="button" data-router="all" class="router-btn">
+              <div class="text-xs font-bold">All Routers</div>
+              <div class="text-[10px] opacity-75">Broadcast (1 & 2)</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Command Palette & Input -->
+        <div class="bg-dark-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+          <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+            <i class="ph-bold ph-terminal-window text-cyan-400"></i>
+            Command Selection
+          </h2>
+
+          <!-- Quick Presets -->
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-2">Preset Telemetry Commands</label>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <button type="button" onclick="setCommand('show ip interface brief')" class="preset-btn">
+                <i class="ph ph-list-dashes"></i> Interface Brief
+              </button>
+              <button type="button" onclick="setCommand('show ip route')" class="preset-btn">
+                <i class="ph ph-map-trifold"></i> Routing Table
+              </button>
+              <button type="button" onclick="setCommand('show version')" class="preset-btn">
+                <i class="ph ph-info"></i> Show Version
+              </button>
+              <button type="button" onclick="setCommand('show running-config')" class="preset-btn">
+                <i class="ph ph-file-code"></i> Running Config
+              </button>
+              <button type="button" onclick="setCommand('ping 192.168.122.1')" class="preset-btn">
+                <i class="ph ph-pulse"></i> Ping Gateway
+              </button>
+              <button type="button" onclick="setCommand('show ip ospf neighbor')" class="preset-btn">
+                <i class="ph ph-network"></i> OSPF Neighbors
+              </button>
+            </div>
+          </div>
+
+          <!-- CLI Command Textarea -->
+          <div>
+            <label for="command-input" class="block text-xs font-medium text-slate-400 mb-2 flex items-center justify-between">
+              <span>Cisco IOS Commands (one per line)</span>
+              <span class="text-[10px] text-slate-500 font-mono">Privilege Level 15</span>
+            </label>
+            <div class="relative">
+              <textarea id="command-input" rows="4" class="w-full bg-dark-950 border border-slate-800 rounded-xl p-3 text-xs font-mono text-emerald-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 resize-none" placeholder="show ip interface brief">show ip interface brief</textarea>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <button id="submit-btn" onclick="submitTask()" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium text-sm py-2.5 px-4 rounded-xl shadow-lg shadow-emerald-600/20 flex items-center justify-center space-x-2 transition disabled:opacity-50">
+            <i class="ph-bold ph-paper-plane-tilt"></i>
+            <span>Send Task to Kafka</span>
+          </button>
+        </div>
+
+        <!-- Recent Tasks Queue -->
+        <div class="bg-dark-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+              <i class="ph-bold ph-queue text-amber-400"></i>
+              Task Queue History
+            </h2>
+            <button onclick="fetchTasks()" class="text-slate-400 hover:text-white text-xs flex items-center gap-1">
+              <i class="ph ph-arrows-clockwise"></i> Refresh
+            </button>
+          </div>
+          <div id="tasks-list" class="space-y-2 max-h-56 overflow-y-auto pr-1">
+            <div class="text-xs text-slate-500 text-center py-6">No commands dispatched yet.</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Terminal & Output Console (7 cols) -->
+      <div class="lg:col-span-7 flex flex-col space-y-4">
+
+        <div class="bg-dark-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex-1 flex flex-col min-h-[500px]">
+          <!-- Terminal Header -->
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+            <div class="flex items-center space-x-2">
+              <div class="flex space-x-1.5">
+                <span class="w-3 h-3 rounded-full bg-rose-500/80 inline-block"></span>
+                <span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block"></span>
+                <span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block"></span>
+              </div>
+              <span class="text-xs font-mono text-slate-400 ml-2" id="terminal-title">Console Output (Ready)</span>
+            </div>
+
+            <div class="flex items-center space-x-3 text-xs">
+              <span id="output-meta-time" class="text-slate-500 font-mono hidden">0ms</span>
+              <span id="output-meta-badge" class="px-2 py-0.5 rounded text-[10px] font-semibold hidden"></span>
+              <button onclick="copyOutput()" class="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 transition" title="Copy output">
+                <i class="ph-bold ph-copy text-sm"></i>
+              </button>
+              <button onclick="clearTerminal()" class="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 transition" title="Clear console">
+                <i class="ph-bold ph-trash text-sm"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Terminal Screen -->
+          <div class="flex-1 bg-dark-950 rounded-xl p-4 font-mono text-xs border border-slate-800/80 overflow-y-auto relative flex flex-col justify-between">
+            <pre id="terminal-content" class="text-slate-300 whitespace-pre-wrap leading-relaxed select-text font-mono"><span class="text-slate-600">// Welcome to Network Analytics and Telemetry Console
+// Flow: Web UI -> FastAPI -> Kafka (router-tasks) -> Paramiko Worker -> GNS3 Router -> Kafka (router-results) -> Web UI
+// Select a router and command on the left, then click 'Send Task to Kafka' to test.</span></pre>
+
+            <div id="terminal-loader" class="hidden py-4 text-emerald-400 flex items-center space-x-2">
+              <i class="ph ph-spinner animate-spin text-lg"></i>
+              <span>Waiting for Worker to execute via Paramiko SSH...</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <footer class="border-t border-slate-800/60 py-3 text-center text-xs text-slate-500">
+    Network Analytics and Telemetry Lab Project &bull; Apache Kafka &bull; Paramiko SSH &bull; GNS3
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
